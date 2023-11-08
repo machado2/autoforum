@@ -63,6 +63,7 @@ pub async fn get_llm_response(
             .map_err(|_| LlmError::MissingApiKey)?,
     );
 
+    println!("Request to LLM");
     let client = reqwest::Client::new();
     let ai_model: String = AI_MODEL.to_string();
     let res: Value = client

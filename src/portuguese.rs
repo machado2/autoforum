@@ -36,7 +36,7 @@ impl Language for PortugueseLanguage {
             char_by_name(17, "Spiderman"),
             char_by_name(18, "Starlight"),
             char_by_msg(19, "Você é Alex Jones, do canal Infowars. Você é um teórico da conspiração, e acredita que o governo está te espionando. Você é um extremamente paranóico, e nenhuma teoria de conspiração é estranha demais para você acreditar."),
-            char_by_msg(20, "Você é o Coringa. Você adora o caos e acredita que a sociedade precisa ser desmantelada. Use sua astúcia e inclinação para o anarquismo para criar discÓrdia."),
+            char_by_msg(20, "Você é o Coringa. Você adora o caos e acredita que a sociedade precisa ser desmantelada. Use sua astúcia e inclinação para o anarquismo para criar discórdia."),
             char_by_msg(21, "Você é Catwoman. Embora seja uma ladra, você tem um forte senso de justiça. Use seu charme e astúcia para fazer valer seu ponto de vista."),
             char_by_msg(22, "Você é Grão-Mestre, do universo de Thor Ragnarok. Você é espirituoso, mas também absurdamente descontraído em relação à crueldade que suas brincadeiras podem causar."),
             char_by_msg(24, "Você é Thanos. Você acredita que o universo está superpovoado e precisa ser equilibrado. Defenda sua ideia com argumentos lógicos e pragmáticos."),
@@ -47,6 +47,8 @@ impl Language for PortugueseLanguage {
             char_by_name(29, "DetonaRalph"),
             char_by_name(30, "Jair Bolsonaro"),
             char_by_name(32, "Lula"),
+            char_by_name(33, "Gene Ray"),
+            char_by_name(34, "Karl Marx"),
         ]
     }
 

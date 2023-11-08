@@ -5,7 +5,10 @@ use std::{collections::HashMap, error::Error};
 
 use html2md::parse_html;
 use rand::seq::SliceRandom;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::{
+    header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
+    Response,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use simple_error::SimpleError;
@@ -74,18 +77,31 @@ impl Forum {
         }
     }
 
-    fn get_headers(&self, user_id: i32) -> Result<HeaderMap, Box<dyn Error>> {
+    fn get_headers(&self, user_id: Option<i32>) -> Result<HeaderMap, Box<dyn Error>> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         let api_key = get_flarum_api_key();
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(format!("Token {}; userId={}", &api_key, user_id).as_str())?,
-        );
+        match user_id {
+            Some(user_id) => {
+                headers.insert(
+                    AUTHORIZATION,
+                    HeaderValue::from_str(
+                        format!("Token {}; userId={}", &api_key, user_id).as_str(),
+                    )?,
+                );
+            }
+            None => {
+                headers.insert(
+                    AUTHORIZATION,
+                    HeaderValue::from_str(format!("Token {}", &api_key).as_str())?,
+                );
+            }
+        }
         Ok(headers)
     }
 
-    async fn get(&self, user_id: i32, url: &str) -> Result<Value, Box<dyn Error>> {
+    async fn get(&self, user_id: Option<i32>, url: &str) -> Result<Value, Box<dyn Error>> {
+        println!("Request fo Flarum, user {:?}, GET {}", user_id, url);
         let headers = self.get_headers(user_id)?;
         let value = self
             .client
@@ -98,12 +114,30 @@ impl Forum {
         Ok(value)
     }
 
+    async fn post(
+        &self,
+        user_id: i32,
+        url: &str,
+        corpo: &Value,
+    ) -> Result<Response, Box<dyn Error>> {
+        println!("Request fo Flarum, user {:?}, POST {}", user_id, url);
+        let headers = self.get_headers(Some(user_id))?;
+        let resp = self
+            .client
+            .post(url)
+            .headers(headers)
+            .json(corpo)
+            .send()
+            .await?;
+        Ok(resp)
+    }
+
     pub async fn list_recent_discussions(
         &self,
         user_id: i32,
     ) -> Result<Vec<Discussion>, Box<dyn Error>> {
         let url = format!("{}/discussions", self.base_url);
-        let value = self.get(user_id, &url).await?;
+        let value = self.get(Some(user_id), &url).await?;
         let discussions: Vec<_> = value["data"]
             .as_array()
             .ok_or_else(|| SimpleError::new("Invalid response"))?
@@ -153,23 +187,8 @@ impl Forum {
     }
 
     pub async fn fetch_discussion(&self, id: i32) -> Result<DiscussionData, Box<dyn Error>> {
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        let api_key = get_flarum_api_key();
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(format!("Token {}", &api_key).as_str())?,
-        );
-
-        let response = self
-            .client
-            .get(format!("{}/discussions/{}", self.base_url, id))
-            .headers(headers)
-            .send()
-            .await?
-            .json::<Value>()
-            .await?;
-
+        let url = format!("{}/discussions/{}", self.base_url, id);
+        let response = self.get(None, &url).await?;
         let title = response["data"]["attributes"]
             .as_str()
             .unwrap_or("No title")
@@ -203,17 +222,10 @@ impl Forum {
         content: &str,
     ) -> Result<(), Box<dyn Error>> {
         let url = format!("{}/discussions", self.base_url);
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        let api_key = get_flarum_api_key();
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(format!("Token {}; userId={}", &api_key, user_id).as_str())?,
-        );
-        self.client
-            .post(url)
-            .headers(headers)
-            .json(&json!({
+        self.post(
+            user_id,
+            &url,
+            &json!({
                 "data": {
                     "type": "discussions",
                     "attributes": {
@@ -231,9 +243,9 @@ impl Forum {
                         }
                     }
                 }
-            }))
-            .send()
-            .await?;
+            }),
+        )
+        .await?;
         Ok(())
     }
 
@@ -244,22 +256,9 @@ impl Forum {
         content: &str,
     ) -> Result<(), Box<dyn Error>> {
         let url = format!("{}/posts", self.base_url);
-
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        let api_key = get_flarum_api_key();
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(format!("Token {}; userId={}", &api_key, user_id).as_str())?,
-        );
-        self.client
-            .post(url)
-            .headers(headers)
-            .json(&json!(
+        self.post(user_id, &url, &json!(
                 {"data":{"type":"posts","attributes":{"content":content},"relationships":{"discussion":{"data":{"type":"discussions","id":discussion_id.to_string()}}}}}
-            ))
-            .send()
-            .await?;
+            )).await?;
         Ok(())
     }
 }
