@@ -49,7 +49,9 @@ async fn main() {
     } else {
         match opt.discussion_id {
             Some(discussion_id) => {
-                result = car.post_on_discussion(lang.as_ref(), &forum, discussion_id).await;
+                result = car
+                    .post_on_discussion(lang.as_ref(), &forum, discussion_id)
+                    .await;
             }
             None => {
                 result = car.interact_with_forum(lang.as_ref(), &forum).await;
